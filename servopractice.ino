@@ -7,15 +7,25 @@
 #include <Servo.h>
 #include <RGBLed.h>
 
+#include <Ultrasonic.h>
+
 Servo myservo;
 Servo myservo2;
+int storyProgress = 0;
 const int buttonPin = 2;
+const int button2 = 4;
 const int vibrationPin = 8;
 const int redLED = 6;
 const int greenLED = 3;
 const int blueLED = 5;
 bool isSaved = false;
 int i = 0;
+
+
+const int ledPin = 3;
+Ultrasonic ultrasonic(12, 13,400000);
+int distance;
+int affordanceLED;
 
 
 void setup() {
@@ -31,6 +41,9 @@ void setup() {
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   pinMode(blueLED, OUTPUT);
+
+
+  pinMode(ledPin, OUTPUT);
 }
 
 void setColor(int redValue, int greenValue, int blueValue) {
@@ -39,23 +52,40 @@ void setColor(int redValue, int greenValue, int blueValue) {
   analogWrite(blueLED, blueValue);
 }
 
+void approach() {
+  distance = ultrasonic.read();
+  Serial.println(distance);
+  //when someones hand is close enough i want it to start caring
+  if (distance == 0) {
+    affordanceLED = 0;
+    myservo.write (90); // 90 is important for MECHANISM (harry!)
+    // dont turn on if hand is far!
+  } else if (distance <= 15)  {
+      affordanceLED = (255 +  (distance * -17) );
+      myservo.write(180);
+      storyProgress += 50;
+      // if hand is near turn on (numbers were my attempt at dimming but u cant rlly tell with regular LED)
+  }
+  digitalWrite(ledPin, affordanceLED);
+  //Serial.println(affordanceLED);
+}
+
+
 void gavel() {
   if (digitalRead(buttonPin) == HIGH) {
     myservo.write(0);
-    
+    storyProgress += 1;
   } else {
     myservo.write(90);
   }
 }
 
 void wand() {
-  if (digitalRead(buttonPin) == HIGH) {
-    myservo.write(180);
+  if (digitalRead(button2) == HIGH) {
     myservo2.write(0);
-
+    storyProgress += 1;
     
   } else {
-    myservo.write(90);
     myservo2.write(90);
   }
 }
@@ -70,7 +100,7 @@ void timeTurner() {
 
     setColor(i, 255 - i, 0);
     delay(10); // Adjust speed of the fade
-    if (digitalRead(vibrationPin) == HIGH) {
+    if (digitalRead(button2) == HIGH) {
       Serial.println("I'm SAVED!");
       setColor(0, 255, 0);
       i = 0;
@@ -84,19 +114,24 @@ void timeTurner() {
       isSaved = true;
     }
 
-
   }
   
 }
 
+void pumpkinPatch() {
+
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
-  gavel();
-  /*
-  if (digitalRead(buttonPin) == HIGH) {
-    myservo.write(180);
-  } else {
-    myservo.write(0);
+  Serial.println(storyProgress);
+  approach();
+  if (storyProgress >= 200) {
+    wand();
   }
-  */
+  if (storyProgress >= 400) {
+    gavel();
+  }
+
+
 }
